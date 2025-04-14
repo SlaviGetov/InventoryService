@@ -1,0 +1,46 @@
+services:
+  server:
+    build:
+      context: .
+    environment:
+      NODE_ENV: production
+      MYSQL_HOST: db
+      MYSQL_USER: root
+      MYSQL_PASSWORD_FILE: /run/secrets/db-password
+      MYSQL_DATABASE: inventorydb
+    ports:
+      - 3000:3000
+    depends_on:
+      db:
+        condition: service_healthy
+    secrets:
+      - db-password
+  db:
+    image: mysql
+    restart: always
+    user: root
+    secrets:
+      - db-password
+    volumes:
+      - db-data:/var/lib/mysql
+    environment:
+      - MYSQL_DATABASE=inventorydb
+      - MYSQL_ROOT_PASSWORD_FILE=/run/secrets/db-password
+    expose:
+      - 3306
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  nginx:
+    image: nginx:1-alpine
+    ports:
+      - 8089:80
+    volumes:
+      - ./webapp/:/usr/share/nginx/html
+volumes:
+  db-data:
+secrets:
+  db-password:
+    file: db/password.txt
